@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>llama.cpp chat</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --border: #2a2f3a;
+    --text: #e6e8ec;
+    --muted: #9aa2af;
+    --accent: #5b8cff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    justify-content: center;
+    padding: 2rem 1rem;
+  }
+  .app {
+    width: 100%;
+    max-width: 720px;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  h1 { font-size: 1.25rem; margin: 0; }
+  .settings {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+  }
+  .settings label { color: var(--muted); }
+  .settings input {
+    width: 100%;
+    background: #0f1115;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    padding: 0.4rem 0.5rem;
+    font-size: 0.85rem;
+  }
+  #chat {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem;
+    min-height: 320px;
+    max-height: 55vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .msg { max-width: 85%; padding: 0.5rem 0.75rem; border-radius: 10px; line-height: 1.4; white-space: pre-wrap; }
+  .msg.user { align-self: flex-end; background: var(--accent); color: white; }
+  .msg.assistant { align-self: flex-start; background: #232733; }
+  .msg.system { align-self: center; color: var(--muted); font-size: 0.8rem; }
+  form { display: flex; gap: 0.5rem; }
+  textarea {
+    flex: 1;
+    resize: none;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 0.6rem 0.75rem;
+    font-size: 0.95rem;
+    font-family: inherit;
+  }
+  button {
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 0 1.25rem;
+    font-size: 0.95rem;
+    cursor: pointer;
+  }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>llama.cpp on Render</h1>
+
+  <div class="settings">
+    <label for="endpoint">Server URL (your Render service, no trailing slash)</label>
+    <input id="endpoint" type="text" placeholder="https://your-service.onrender.com" />
+    <label for="apiKey">API key (only if you set LLAMA_API_KEY on the server; otherwise leave blank)</label>
+    <input id="apiKey" type="password" placeholder="optional" />
+  </div>
+
+  <div id="chat">
+    <div class="msg system">Enter your Render service URL above, then start chatting.</div>
+  </div>
+
+  <form id="chat-form">
+    <textarea id="input" rows="2" placeholder="Type a message..."></textarea>
+    <button type="submit" id="send-btn">Send</button>
+  </form>
+</div>
+
+<script>
+  const chatEl = document.getElementById('chat');
+  const formEl = document.getElementById('chat-form');
+  const inputEl = document.getElementById('input');
+  const sendBtn = document.getElementById('send-btn');
+  const endpointEl = document.getElementById('endpoint');
+  const apiKeyEl = document.getElementById('apiKey');
+
+  // Persist the endpoint/key in this browser only, so you don't retype them.
+  endpointEl.value = localStorage.getItem('llama_endpoint') || '';
+  apiKeyEl.value = localStorage.getItem('llama_api_key') || '';
+  endpointEl.addEventListener('change', () => localStorage.setItem('llama_endpoint', endpointEl.value.trim()));
+  apiKeyEl.addEventListener('change', () => localStorage.setItem('llama_api_key', apiKeyEl.value.trim()));
+
+  const history = [
+    { role: 'system', content: 'You are a helpful, concise assistant.' }
+  ];
+
+  function addMessage(role, text) {
+    const div = document.createElement('div');
+    div.className = `msg ${role}`;
+    div.textContent = text;
+    chatEl.appendChild(div);
+    chatEl.scrollTop = chatEl.scrollHeight;
+    return div;
+  }
+
+  formEl.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const text = inputEl.value.trim();
+    const base = endpointEl.value.trim().replace(/\/$/, '');
+    if (!text) return;
+    if (!base) {
+      addMessage('system', 'Please enter your Render service URL first.');
+      return;
+    }
+
+    addMessage('user', text);
+    history.push({ role: 'user', content: text });
+    inputEl.value = '';
+    sendBtn.disabled = true;
+    const assistantDiv = addMessage('assistant', '...');
+
+    try {
+      const headers = { 'Content-Type': 'application/json' };
+      const key = apiKeyEl.value.trim();
+      if (key) headers['Authorization'] = `Bearer ${key}`;
+
+      const res = await fetch(`${base}/v1/chat/completions`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          messages: history,
+          temperature: 0.7,
+          max_tokens: 512,
+          stream: false
+        })
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`${res.status} ${res.statusText}: ${errText}`);
+      }
+
+      const data = await res.json();
+      const reply = data.choices?.[0]?.message?.content ?? '(no response)';
+      assistantDiv.textContent = reply;
+      history.push({ role: 'assistant', content: reply });
+    } catch (err) {
+      assistantDiv.textContent = `Error: ${err.message}`;
+    } finally {
+      sendBtn.disabled = false;
+    }
+  });
+
+  inputEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      formEl.requestSubmit();
+    }
+  });
+</script>
+</body>
+</html>

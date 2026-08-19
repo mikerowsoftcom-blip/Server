@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: llama-cpp-server
+    runtime: docker
+    plan: starter          # free plan has 512MB RAM which is too tight; starter (2GB) is a safer minimum
+    region: oregon          # change to whatever region is closest to you
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: LLAMA_API_KEY
+        sync: false          # set this in the Render dashboard; leave blank to disable auth
+    autoDeploy: true
