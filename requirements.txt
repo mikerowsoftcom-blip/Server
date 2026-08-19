@@ -1,4 +1,0 @@
-fastapi==0.115.6
-uvicorn[standard]==0.34.0
-onnxruntime-genai==0.9.0
-huggingface-hub==0.28.1
