@@ -1,0 +1,16 @@
+<!-- Drop this into your static site. Replace the URL with your real Render URL. -->
+<script>
+async function askLLM(prompt) {
+  const res = await fetch("https://fantastic-happiness-gh01.onrender.com/generate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt: prompt, max_tokens: 200 }),
+  });
+  if (!res.ok) throw new Error("Request failed: " + res.status);
+  const data = await res.json();
+  return data.text;
+}
+
+// Example usage:
+// askLLM("Write a haiku about the ocean.").then(console.log);
+</script>
