@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: llama-cpp-free
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: HF_MODEL
+        value: tensorblock/SmolLM2-135M-Instruct-GGUF:Q4_K_M
+      - key: CTX_SIZE
+        value: "512"
+      - key: N_PREDICT
+        value: "256"
+      - key: THREADS
+        value: "1"
+      - key: BATCH
+        value: "32"
