@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: llama-cpp
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: MODEL_PATH
+        value: /models/model.gguf
+      - key: CTX_SIZE
+        value: "4096"
+      - key: N_PREDICT
+        value: "512"
+    # Add a Render Persistent Disk mounted at /models in the dashboard
+    # if you want the GGUF model to survive deploys/restarts.
