@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: llama-cpp-server
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: pro          # CPU count directly drives tokens/sec -- see README.
+    region: oregon
+    healthCheckPath: /health
+    disk:
+      name: model-cache
+      mountPath: /models
+      sizeGB: 20        # big enough for a couple of quantized models
+    envVars:
+      - key: MODEL_URL
+        value: https://huggingface.co/bartowski/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct-Q4_K_M.gguf
+      - key: MODEL_FILE
+        value: Llama-3.2-3B-Instruct-Q4_K_M.gguf
+      - key: CTX_SIZE
+        value: "4096"
+      - key: N_PREDICT_DEFAULT
+        value: "512"
+      - key: BATCH_SIZE
+        value: "1024"
+      - key: UBATCH_SIZE
+        value: "256"
+      - key: PARALLEL_SLOTS
+        value: "1"
