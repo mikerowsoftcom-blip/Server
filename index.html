@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Curriculum Archive</title>
+
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/browser-image-compression/dist/browser-image-compression.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg:#f8fafc; 
+      --card:#fff; 
+      --border:#e5e7eb;
+      --text:#0f172a; 
+      --muted:#64748b;
+      --accent:#6366f1; 
+      --radius:12px;
+    }
+    *{box-sizing:border-box}
+    body{
+      font-family:'Inter',system-ui,sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      max-width:1000px;
+      margin:40px auto;
+      padding:0 20px;
+    }
+    h1{font-size:2rem;margin-bottom:24px}
+    h2{font-size:1.25rem;margin-bottom:12px}
+    input,textarea{
+      width:100%;padding:10px 12px;margin-top:6px;
+      border-radius:var(--radius);border:1px solid var(--border);font-family:inherit;
+    }
+    button{
+      background:var(--accent);color:#fff;border:none;border-radius:var(--radius);
+      padding:10px 16px;font-weight:600;cursor:pointer;margin-top:10px;
+    }
+    button.secondary{background:transparent;color:var(--text);border:1px solid var(--border);}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:24px;}
+    ul{list-style:none;padding:0}
+    li{border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px}
+    .muted{color:var(--muted);font-size:.85rem}
+    .top-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
+
+    /* OSDG */
+    .osdg-mark{position:fixed;top:20px;right:20px;display:flex;align-items:center;gap:12px;z-index:500;}
+    .osdg-stripes{display:flex;flex-direction:column;gap:4px;}
+    .osdg-stripe{height:6px;border-radius:2px;}
+    .osdg-yellow{width:40px;background:#facc15;}
+    .osdg-green{width:60px;background:#22c55e;}
+    .osdg-blue{width:80px;background:#3b82f6;}
+    .osdg-red{width:100px;background:#ef4444;}
+    .osdg-text{font-weight:600;font-size:0.9rem;white-space:nowrap;}
+
+    /* TABS */
+    .tab-bar{display:flex;gap:0;margin-bottom:24px;border-bottom:2px solid var(--border);}
+    .tab-btn{
+      background:none;color:var(--muted);border:none;
+      border-bottom:3px solid transparent;border-radius:0;
+      padding:10px 20px;font-weight:600;font-size:0.95rem;
+      cursor:pointer;margin-top:0;margin-bottom:-2px;
+      transition:color .15s,border-color .15s;
+    }
+    .tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);}
+    .tab-btn:hover:not(.active){color:var(--text);}
+    .tab-panel{display:none;}
+    .tab-panel.active{display:block;}
+
+    /* CALENDAR */
+    .calendar-wrap{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap;}
+    .calendar{flex-shrink:0;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;min-width:280px;}
+    .cal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
+    .cal-nav{background:none;border:1px solid var(--border);color:var(--text);border-radius:8px;padding:4px 10px;cursor:pointer;margin:0;font-size:1rem;}
+    .cal-nav:hover{background:var(--bg);}
+    .cal-title{font-weight:700;font-size:1rem;}
+    .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
+    .cal-dow{text-align:center;font-size:.72rem;font-weight:600;color:var(--muted);padding:4px 0;}
+    .cal-day{text-align:center;padding:7px 4px;border-radius:8px;font-size:.85rem;cursor:default;transition:background .12s;}
+    .cal-day.empty{opacity:0;pointer-events:none;}
+    .cal-day.has-entries{background:#ede9fe;color:var(--accent);font-weight:700;cursor:pointer;}
+    .cal-day.has-entries:hover{background:var(--accent);color:#fff;}
+    .cal-day.selected{background:var(--accent)!important;color:#fff!important;}
+    .cal-day.today{outline:2px solid var(--accent);outline-offset:-2px;}
+    .cal-results{flex:1;min-width:240px;}
+    .cal-results h3{font-size:1rem;margin-bottom:12px;color:var(--muted);}
+
+    /* TERMINAL */
+    .terminal-wrap{background:#0d1117;border-radius:var(--radius);overflow:hidden;border:1px solid #30363d;}
+    .terminal-topbar{background:#161b22;padding:10px 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #30363d;}
+    .term-dot{width:12px;height:12px;border-radius:50%;}
+    .term-dot.red{background:#ff5f57;}
+    .term-dot.yellow{background:#febc2e;}
+    .term-dot.green{background:#28c840;}
+    .terminal-title{flex:1;text-align:center;color:#8b949e;font-size:.8rem;font-family:'JetBrains Mono',monospace;}
+    .terminal-output{
+      padding:16px;font-family:'JetBrains Mono',monospace;font-size:.85rem;
+      color:#e6edf3;min-height:340px;max-height:500px;overflow-y:auto;line-height:1.6;
+    }
+    .term-line{margin:2px 0;white-space:pre-wrap;word-break:break-all;}
+    .term-prompt{color:#6366f1;}
+    .term-green{color:#28c840;}
+    .term-red{color:#ff5f57;}
+    .term-yellow{color:#febc2e;}
+    .term-cyan{color:#58c8e8;}
+    .term-muted{color:#8b949e;}
+    .term-dir{color:#58c8e8;font-weight:600;}
+    .terminal-input-row{display:flex;align-items:center;padding:8px 16px 14px;border-top:1px solid #30363d;background:#0d1117;}
+    .term-ps1{font-family:'JetBrains Mono',monospace;font-size:.85rem;color:#6366f1;white-space:nowrap;margin-right:8px;}
+    #termInput{
+      flex:1;background:none;border:none;outline:none;
+      color:#e6edf3;font-family:'JetBrains Mono',monospace;font-size:.85rem;
+      padding:0;margin:0;caret-color:#6366f1;
+    }
+  </style>
+</head>
+<body>
+
+<div class="osdg-mark">
+  <div class="osdg-stripes">
+    <div class="osdg-stripe osdg-yellow"></div>
+    <div class="osdg-stripe osdg-green"></div>
+    <div class="osdg-stripe osdg-blue"></div>
+    <div class="osdg-stripe osdg-red"></div>
+  </div>
+  <div class="osdg-text">OSDG – Sneh</div>
+</div>
+
+<h1>Curriculum Archive</h1>
+
+<div id="login" class="card">
+  <h2>Login</h2>
+  <input id="email" placeholder="Email" />
+  <input id="password" type="password" placeholder="Password" />
+  <button onclick="login()">Login</button>
+</div>
+
+<div id="app" style="display:none">
+
+  <div class="top-bar">
+    <h2>Dashboard</h2>
+    <div>
+      <button class="secondary" onclick="window.location.href='https://ephemeral-chat--OftenNotKnown.replit.app'">Open Chat</button>
+      <button class="secondary" onclick="logout()">Logout</button>
+    </div>
+  </div>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab('main',this)">📁 Directories</button>
+    <button class="tab-btn" onclick="switchTab('calendar',this)">📅 Calendar</button>
+    <button class="tab-btn" onclick="switchTab('terminal',this)">💻 Terminal</button>
+  </div>
+
+  <!-- MAIN TAB -->
+  <div id="tab-main" class="tab-panel active">
+    <div class="card">
+      <h2>Submit New Work</h2>
+      <input id="subDate" type="date" />
+      <input id="subNotebook" placeholder="Notebook" />
+      <input id="subTitle" placeholder="Title" />
+      <textarea id="subContent" rows="6" placeholder="Write your work here..."></textarea>
+      <button onclick="submitWork()">Submit for Review</button>
+    </div>
+
+    <div class="card">
+      <h2>Submit Image / PDF Directory</h2>
+      <input id="dirName" placeholder="Directory Name" />
+      <input id="imageFiles" type="file" multiple accept="image/*,application/pdf,.pdf" />
+      <button id="uploadBtn" onclick="uploadImageDirectory()">Upload Directory</button>
+      <div id="uploadProgressWrap" style="display:none;margin-top:14px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+          <span id="uploadProgressLabel" style="font-size:.85rem;color:var(--muted)">Uploading...</span>
+          <span id="uploadProgressPct" style="font-size:.85rem;color:var(--muted)">0%</span>
+        </div>
+        <div style="background:var(--border);border-radius:999px;height:8px;overflow:hidden;">
+          <div id="uploadProgressBar" style="height:100%;width:0%;background:var(--accent);border-radius:999px;transition:width .2s ease;"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Approved Directories</h2>
+      <input id="dirSearch" placeholder="Search directories" oninput="loadImageDirs()" />
+      <ul id="imageDirs"></ul>
+    </div>
+
+    <div class="card">
+      <h2>Approved Text Submissions</h2>
+      <input id="textSearch" placeholder="Search text" oninput="loadTextSubmissions()" />
+      <ul id="textList"></ul>
+    </div>
+
+    <div id="adminPanel" class="card" style="display:none">
+      <h2>Admin Panel</h2>
+      <h3>Pending Image Directories</h3>
+      <ul id="pendingDirs"></ul>
+      <h3>Pending Text Submissions</h3>
+    </div>
+  </div>
+
+  <!-- CALENDAR TAB -->
+  <div id="tab-calendar" class="tab-panel">
+    <div class="card">
+      <h2>Browse by Date</h2>
+      <p style="color:var(--muted);font-size:.9rem;margin-bottom:20px;">Highlighted dates have directories uploaded that day. Click to view them.</p>
+      <div class="calendar-wrap">
+        <div class="calendar">
+          <div class="cal-header">
+            <button class="cal-nav" onclick="calNav(-1)">&#8592;</button>
+            <span class="cal-title" id="calTitle"></span>
+            <button class="cal-nav" onclick="calNav(1)">&#8594;</button>
+          </div>
+          <div class="cal-grid" id="calGrid"></div>
+        </div>
+        <div class="cal-results">
+          <h3 id="calResultTitle">Select a date to view directories</h3>
+          <ul id="calDirList"></ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TERMINAL TAB -->
+  <div id="tab-terminal" class="tab-panel">
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div class="terminal-wrap">
+        <div class="terminal-topbar">
+          <div class="term-dot red"></div>
+          <div class="term-dot yellow"></div>
+          <div class="term-dot green"></div>
+          <div class="terminal-title">curriculum-archive — bash</div>
+        </div>
+        <div class="terminal-output" id="termOutput"></div>
+        <div class="terminal-input-row">
+          <span class="term-ps1">archive:/$ </span>
+          <input id="termInput" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="type a command..." />
+        </div>
+      </div>
+    </div>
+    <p style="color:var(--muted);font-size:.82rem;margin-top:10px;">
+      Commands: <code>ls</code> &nbsp;|&nbsp; <code>download &lt;name&gt;</code> &nbsp;|&nbsp; <code>help</code> &nbsp;|&nbsp; <code>clear</code>
+    </p>
+  </div>
+
+</div>
+
+<!-- GALLERY MODAL -->
+<div id="galleryModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;padding:40px;overflow:auto">
+  <div class="card" style="max-width:900px;margin:auto">
+    <div style="display:flex;justify-content:space-between">
+      <h2 id="galleryTitle"></h2>
+      <button class="secondary" onclick="closeGallery()">Close</button>
+    </div>
+    <div id="galleryGrid" style="margin-top:20px"></div>
+  </div>
+</div>
+
+<!-- FULLSCREEN VIEWER -->
+<div id="fileViewer" style="display:none;position:fixed;inset:0;background:black;z-index:2000;">
+  <button onclick="closeViewer()" style="position:absolute;top:20px;left:20px;z-index:2100;background:white;border:none;padding:8px 14px;cursor:pointer;border-radius:6px;font-weight:600;font-size:1rem;">✕</button>
+  <button onclick="prevImage()" style="position:absolute;left:20px;top:50%;transform:translateY(-50%);z-index:2100;background:white;border:none;padding:12px 16px;cursor:pointer;border-radius:6px;font-size:1.2rem;">◀</button>
+  <button onclick="nextImage()" style="position:absolute;right:20px;top:50%;transform:translateY(-50%);z-index:2100;background:white;border:none;padding:12px 16px;cursor:pointer;border-radius:6px;font-size:1.2rem;">▶</button>
+  <iframe id="viewerPdf" style="display:none;position:absolute;top:50px;bottom:0;left:70px;right:70px;width:calc(100vw - 140px);height:calc(100vh - 60px);border:0;background:white;"></iframe>
+  <a id="viewerPdfLink" target="_blank" rel="noopener" style="display:none;position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:2100;background:white;padding:6px 12px;border-radius:6px;font-size:.85rem;text-decoration:none;color:#111;">Open PDF in new tab ↗</a>
+  <img id="viewerImage" style="display:block;max-height:90vh;max-width:calc(100vw - 140px);position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);object-fit:contain;">
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
